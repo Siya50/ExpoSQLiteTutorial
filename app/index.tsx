@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { deleteItem, fetchItems, insertItem, updateItem, type Item } from "../data/db";
+import CustomCheckbox from "./components/CustomCheckbox";
 import ItemRow from "./components/ItemRow";
 
 export default function App() {
@@ -31,7 +32,8 @@ export default function App() {
   const [name, setName] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("");
   const [editingId, setEditingId] = useState<number | null>(null);
-
+  const [sortByHighToLow, setSortByHighToLow] = useState(false);
+  const [sortByLowToHigh, setSortByLowToHigh] = useState(false);
   /**
    * Database State
    *
@@ -52,7 +54,7 @@ export default function App() {
    */
   useEffect(() => {
     loadItems();
-  }, []);
+  }, [sortByHighToLow, sortByLowToHigh]);
 
   /**
    * Load Items Function
@@ -70,6 +72,14 @@ export default function App() {
   const loadItems = async () => {
     try {
       const value = await fetchItems(db);
+      if (sortByHighToLow) {
+        value.sort((a, b) => b.quantity - a.quantity); // High to Low
+      } else if (sortByLowToHigh) {
+        value.sort((a, b) => a.quantity - b.quantity); // Low to High
+      } else {
+        // Default: sort alphabetically
+        value.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+      }
       setItems(value);
     } catch (err) {
       console.log("Failed to fetch items", err);
@@ -214,6 +224,24 @@ export default function App() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>SQLite Example</Text>
+      <CustomCheckbox
+        value={sortByHighToLow}
+        onValueChange={(newValue) => {
+          setSortByHighToLow(newValue);
+          if (newValue) setSortByLowToHigh(false);
+          loadItems(); // re-sort list
+        }}
+        label="Sort by Quantity: High to Low"
+      />
+      <CustomCheckbox
+        value={sortByLowToHigh}
+        onValueChange={(newValue) => {
+          setSortByLowToHigh(newValue);
+          if (newValue) setSortByHighToLow(false);
+          loadItems(); // re-sort list
+        }}
+        label="Sort by Quantity: Low to High"
+      />
       <TextInput
         style={styles.input}
         placeholder="Item Name"
