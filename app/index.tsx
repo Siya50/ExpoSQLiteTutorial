@@ -10,8 +10,8 @@ import {
   View,
 } from "react-native";
 import { deleteItem, fetchItems, insertItem, updateItem, type Item } from "../data/db";
-import CustomCheckbox from "./components/CustomCheckbox";
 import ItemRow from "./components/ItemRow";
+import RadioButton from "./components/RadioButton";
 
 export default function App() {
   /**
@@ -32,8 +32,8 @@ export default function App() {
   const [name, setName] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("");
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [sortByHighToLow, setSortByHighToLow] = useState(false);
-  const [sortByLowToHigh, setSortByLowToHigh] = useState(false);
+  const [sortType, setSortType] = useState<"default" | "highToLow" | "lowToHigh" | "ZtoA">("default");
+
   /**
    * Database State
    *
@@ -54,7 +54,7 @@ export default function App() {
    */
   useEffect(() => {
     loadItems();
-  }, [sortByHighToLow, sortByLowToHigh]);
+  }, [sortType]);
 
   /**
    * Load Items Function
@@ -72,19 +72,30 @@ export default function App() {
   const loadItems = async () => {
     try {
       const value = await fetchItems(db);
-      if (sortByHighToLow) {
-        value.sort((a, b) => b.quantity - a.quantity); // High to Low
-      } else if (sortByLowToHigh) {
-        value.sort((a, b) => a.quantity - b.quantity); // Low to High
-      } else {
-        // Default: sort alphabetically
-        value.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-      }
-      setItems(value);
+      const sorted = sortItems(value, sortType);
+      setItems(sorted);
     } catch (err) {
       console.log("Failed to fetch items", err);
     }
-  };
+};
+
+  /**Sorting function */
+  const sortItems = (items: Item[], type: typeof sortType): Item[] => {
+  switch (type) {
+    case "highToLow":
+      return items.sort((a, b) => b.quantity - a.quantity);
+    case "lowToHigh":
+      return items.sort((a, b) => a.quantity - b.quantity);
+    case "ZtoA":
+      return items.sort((a, b) =>
+        b.name.localeCompare(a.name, undefined, { sensitivity: "base" })
+    );
+    default:
+      return items.sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+      );
+  }
+};
 
   /**
    * Save Item Function
@@ -224,23 +235,27 @@ export default function App() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>SQLite Example</Text>
-      <CustomCheckbox
-        value={sortByHighToLow}
-        onValueChange={(newValue) => {
-          setSortByHighToLow(newValue);
-          if (newValue) setSortByLowToHigh(false);
-          loadItems(); // re-sort list
-        }}
-        label="Sort by Quantity: High to Low"
+       <RadioButton
+        label="Name (A-Z)"
+        selected={sortType === "default"}
+        onPress={() => setSortType("default")}
       />
-      <CustomCheckbox
-        value={sortByLowToHigh}
-        onValueChange={(newValue) => {
-          setSortByLowToHigh(newValue);
-          if (newValue) setSortByHighToLow(false);
-          loadItems(); // re-sort list
-        }}
-        label="Sort by Quantity: Low to High"
+      <RadioButton
+        label="Name (Z-A)"
+        selected={sortType === "ZtoA"}
+        onPress={() => setSortType("ZtoA")}
+      />
+
+      <RadioButton
+        label="Quantity: High to Low"
+        selected={sortType === "highToLow"}
+        onPress={() => setSortType("highToLow")}
+      />
+
+      <RadioButton
+        label="Quantity: Low to High"
+        selected={sortType === "lowToHigh"}
+        onPress={() => setSortType("lowToHigh")}
       />
       <TextInput
         style={styles.input}
